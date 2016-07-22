@@ -1441,52 +1441,64 @@ WithFragments.prototype = {
  * @alias Doc
  */
 function Document(id, uid, type, href, tags, slugs, data) {
-  /**
-   * The ID of the document
-   * @type {string}
-   */
-  this.id = id;
-  /**
-   * The User ID of the document, a human readable id
-   * @type {string|null}
-   */
-  this.uid = uid;
-  /**
-   * The type of the document, corresponds to a document mask defined in the repository
-   * @type {string}
-   */
-  this.type = type;
-  /**
-   * The URL of the document in the API
-   * @type {string}
-   */
-  this.href = href;
-  /**
-   * The tags of the document
-   * @type {array}
-   */
-  this.tags = tags;
-  /**
-   * The current slug of the document, "-" if none was provided
-   * @type {string}
-   */
-  this.slug = slugs ? slugs[0] : "-";
-  /**
-   * All the slugs that were ever used by this document (including the current one, at the head)
-   * @type {array}
-   */
-  this.slugs = slugs;
-  /**
-   * The original JSON data from the API
-   */
-  this.data = data;
-  /**
-   * Fragments, converted to business objects
-   */
-  this.fragments = require('./fragments').parseFragments(data);
+  var doc = {
+    /**
+     * The ID of the document
+     * @type {string}
+     */
+    'id': id,
+    /**
+     * The User ID of the document, a human readable id
+     * @type {string|null}
+     */
+    'uid': uid,
+    /**
+     * The type of the document, corresponds to a document mask defined in the repository
+     * @type {string}
+     */
+    'type': type,
+    /**
+     * The URL of the document in the API
+     * @type {string}
+     */
+    'href': href,
+    /**
+     * The tags of the document
+     * @type {array}
+     */
+    'tags': tags,
+    /**
+     * The current slug of the document, "-" if none was provided
+     * @type {string}
+     */
+    'slug': slugs ? slugs[0] : "-",
+    /**
+     * All the slugs that were ever used by this document (including the current one, at the head)
+     * @type {array}
+     */
+    'slugs': slugs,
+    /**
+     * The original JSON data from the API
+     */
+    'data': data
+  };
+  var fragments = require('./fragments').parseFragments(data);
+  for (var key in fragments) {
+    if (fragments.hasOwnProperty(key)) {
+      doc[fieldKey(key, type)] = fragments[key];
+    }
+  }
+  return doc;
 }
 
-Document.prototype = Object.create(WithFragments.prototype);
+function fieldKey(key, docType) {
+  var docTypeRegex = '^' + docType + '\\..*';
+  if (key.match(docTypeRegex)) {
+    return key.replace(docType + '.', '');
+  } else {
+    return key;
+  }
+}
 
 /**
  * Gets the SliceZone fragment in the current Document object, for further manipulation.
@@ -1631,28 +1643,8 @@ var WithFragments = documents.WithFragments,
  * @alias Fragments:Text
  */
 function Text(data) {
-  this.value = data;
+  return data;
 }
-Text.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<span>" + this.value + "</span>";
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return this.value;
-  }
-};
 /**
  * Embodies a document link fragment (a link that is internal to a prismic.io repository)
  * @constructor
@@ -1660,84 +1652,47 @@ Text.prototype = {
  * @alias Fragments:DocumentLink
  */
 function DocumentLink(data) {
-  this.value = data;
-
-  this.document = data.document;
-  /**
-   * @field
-   * @description the linked document id
-   */
-  this.id = data.document.id;
-  /**
-   * @field
-   * @description the linked document uid
-   */
-  this.uid = data.document.uid;
-  /**
-   * @field
-   * @description the linked document tags
-   */
-  this.tags = data.document.tags;
-  /**
-   * @field
-   * @description the linked document slug
-   */
-  this.slug = data.document.slug;
-  /**
-   * @field
-   * @description the linked document type
-   */
-  this.type = data.document.type;
-
   var fragmentsData = {};
   if (data.document.data) {
     for (var field in data.document.data[data.document.type]) {
-      fragmentsData[data.document.type + '.' + field] = data.document.data[data.document.type][field];
+      fragmentsData[field] = data.document.data[data.document.type][field];
     }
   }
-  /**
-   * @field
-   * @description the fragment list, if the fetchLinks parameter was used in at query time
-   */
-  this.fragments = parseFragments(fragmentsData);
-  /**
-   * @field
-   * @description true if the link is broken, false otherwise
-   */
-  this.isBroken = data.isBroken;
+
+  function url(linkResolver) {
+    return linkResolver(data.document, data.isBroken);
+  }
+
+  function asHtml(ctx) {
+    return '<a href="' + url(ctx) + '">' + url(ctx) + '</a>';
+  }
+
+  return {
+    'document': data.document,
+    'id': data.document.id,
+    'uid': data.document.uid,
+    'tags': data.document.tags,
+    'slug': data.document.slug,
+    /**
+     * @field
+     * @description the linked document type
+     */
+    'type': data.document.type,
+    'data': data,
+    /**
+     * @field
+     * @description the fragment list, if the fetchLinks parameter was used in at query time
+     */
+    'fragments': parseFragments(fragmentsData),
+    /**
+     * @field
+     * @description true if the link is broken, false otherwise
+     */
+    'isBroken': data.isBroken,
+    'asHtml': asHtml,
+    'url': url
+  };
 }
-
-DocumentLink.prototype = Object.create(WithFragments.prototype);
-
-/**
- * Turns the fragment into a useable HTML version of it.
- * If the native HTML code doesn't suit your design, this function is meant to be overriden.
- *
- * @params {object} ctx - mandatory ctx object, with a useable linkResolver function (please read prismic.io online documentation about this)
- * @returns {string} - basic HTML code for the fragment
- */
-DocumentLink.prototype.asHtml = function (ctx) {
-  return "<a href=\"" + this.url(ctx) + "\">" + this.url(ctx) + "</a>";
-};
-
-/**
- * Returns the URL of the document link.
- *
- * @params {object} linkResolver - mandatory linkResolver function (please read prismic.io online documentation about this)
- * @returns {string} - the proper URL to use
- */
-DocumentLink.prototype.url = function (linkResolver) {
-  return linkResolver(this, this.isBroken);
-};
-
-/**
- * Turns the fragment into a useable text version of it.
- *
- * @returns {string} - basic text version of the fragment
- */
-DocumentLink.prototype.asText = function (linkResolver) {
-  return this.url(linkResolver);
-};
 
 /**
  * Embodies a web link fragment
@@ -1746,40 +1701,18 @@ DocumentLink.prototype.asText = function (linkResolver) {
  * @alias Fragments:WebLink
  */
 function WebLink(data) {
-  /**
-   * @field
-   * @description the JSON object exactly as is returned in the "data" field of the JSON responses (see API documentation: https://developers.prismic.io/documentation/UjBe8bGIJ3EKtgBZ/api-documentation#json-responses)
-   */
-  this.value = data;
-}
-WebLink.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<a href=\"" + this.url() + "\">" + this.url() + "</a>";
-  },
-  /**
-   * Returns the URL of the link.
-   *
-   * @returns {string} - the proper URL to use
-   */
-  url: function url() {
-    return this.value.url;
-  },
 
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return this.url();
+  var url = data.value.url;
+
+  function asHtml() {
+    return '<a href="' + url + '">' + url + '</a>';
   }
-};
+
+  return {
+    'url': url,
+    'asHtml': asHtml
+  };
+}
 
 /**
  * Embodies a file link fragment
@@ -1788,40 +1721,18 @@ WebLink.prototype = {
  * @alias Fragments:FileLink
  */
 function FileLink(data) {
-  /**
-   * @field
-   * @description the JSON object exactly as is returned in the "data" field of the JSON responses (see API documentation: https://developers.prismic.io/documentation/UjBe8bGIJ3EKtgBZ/api-documentation#json-responses)
-   */
-  this.value = data;
-}
-FileLink.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<a href=\"" + this.url() + "\">" + this.value.file.name + "</a>";
-  },
-  /**
-   * Returns the URL of the link.
-   *
-   * @returns {string} - the proper URL to use
-   */
-  url: function url() {
-    return this.value.file.url;
-  },
 
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return this.url();
+  var url = data.file.url;
+
+  function asHtml() {
+    return '<a href="' + url + '">' + file.name + '</a>';
   }
-};
+
+  return {
+    'url': url,
+    'asHtml': asHtml
+  };
+}
 
 /**
  * Embodies an image link fragment
@@ -1873,32 +1784,8 @@ ImageLink.prototype = {
  * @alias Fragments:Select
  */
 function Select(data) {
-  /**
-   * @field
-   * @description the text value of the fragment
-   */
-  this.value = data;
+  return data;
 }
-Select.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<span>" + this.value + "</span>";
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return this.value;
-  }
-};
 
 /**
  * Embodies a color fragment
@@ -1909,30 +1796,10 @@ Select.prototype = {
 function Color(data) {
   /**
    * @field
-   * @description the text value of the fragment
+   * @description the hexadecimal color value of the fragment
    */
-  this.value = data;
+  return data;
 }
-Color.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<span>" + this.value + "</span>";
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return this.value;
-  }
-};
 
 /**
  * Embodies a geopoint
@@ -1941,38 +1808,15 @@ Color.prototype = {
  * @alias Fragments:GeoPoint
  */
 function GeoPoint(data) {
-  /**
-   * @field
-   * @description the latitude of the geo point
-   */
-  this.latitude = data.latitude;
-  /**
-   * @field
-   * @description the longitude of the geo point
-   */
-  this.longitude = data.longitude;
-}
-
-GeoPoint.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return '<div class="geopoint"><span class="latitude">' + this.latitude + '</span><span class="longitude">' + this.longitude + '</span></div>';
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return '(' + this.latitude + "," + this.longitude + ')';
+  if (data) {
+    return {
+      'latitude': data.latitude,
+      'longitude': data.longitude
+    };
+  } else {
+    return {};
   }
-};
+}
 
 /**
  * Embodies a Number fragment
@@ -1985,32 +1829,8 @@ function Num(data) {
    * @field
    * @description the integer value of the fragment
    */
-  this.value = data;
+  return data;
 }
-Num.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<span>" + this.value + "</span>";
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    if (this.value === null) {
-      return null;
-    } else {
-      return this.value.toString();
-    }
-  }
-};
 
 /**
  * Embodies a Date fragment
@@ -2023,33 +1843,8 @@ function DateFragment(data) {
    * @field
    * @description the Date value of the fragment (as a regular JS Date object)
    */
-  this.value = new Date(data);
+  return new Date(data);
 }
-
-DateFragment.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<time>" + this.value + "</time>";
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    if (this.value === null) {
-      return null;
-    } else {
-      return this.value.toString();
-    }
-  }
-};
 
 /**
  * Embodies a Timestamp fragment
@@ -2064,33 +1859,8 @@ function Timestamp(data) {
    */
   // Adding ":" in the locale if needed, so JS considers it ISO8601-compliant
   var correctIso8601Date = data.length == 24 ? data.substring(0, 22) + ':' + data.substring(22, 24) : data;
-  this.value = new Date(correctIso8601Date);
+  return new Date(correctIso8601Date);
 }
-
-Timestamp.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<time>" + this.value + "</time>";
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    if (this.value === null) {
-      return null;
-    } else {
-      return this.value.toString();
-    }
-  }
-};
 
 /**
  * Embodies an embed fragment
@@ -2103,29 +1873,11 @@ function Embed(data) {
    * @field
    * @description the JSON object exactly as is returned in the "data" field of the JSON responses (see API documentation: https://developers.prismic.io/documentation/UjBe8bGIJ3EKtgBZ/api-documentation#json-responses)
    */
-  this.value = data;
+  return {
+    'value': data,
+    'html': oembed.html
+  };
 }
-
-Embed.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return this.value.oembed.html;
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return "";
-  }
-};
 
 /**
  * Embodies an Image fragment
@@ -2244,15 +1996,13 @@ ImageView.prototype = {
  * @global
  * @alias Fragments:Separator
  */
-function Separator() {}
-Separator.prototype = {
-  asHtml: function asHtml() {
-    return "<hr/>";
-  },
-  asText: function asText() {
-    return "----";
-  }
-};
+function Separator() {
+  return {
+    'type': 'Separator',
+    'html': '<hr/>',
+    'text': '----'
+  };
+}
 
 /**
  * Embodies a fragment of type "Group" (which is a group of subfragments)
@@ -2336,79 +2086,71 @@ Group.prototype = {
  */
 function StructuredText(blocks) {
 
-  this.blocks = blocks;
-}
-
-StructuredText.prototype = {
-
-  /**
-   * @returns {object} the first heading block in the text
-   */
-  getTitle: function getTitle() {
-    for (var i = 0; i < this.blocks.length; i++) {
-      var block = this.blocks[i];
+  function getTitle() {
+    for (var i = 0; i < blocks.length; i++) {
+      var block = blocks[i];
       if (block.type.indexOf('heading') === 0) {
         return block;
       }
     }
     return null;
-  },
+  }
 
   /**
-   * @returns {object} the first block of type paragraph
-   */
-  getFirstParagraph: function getFirstParagraph() {
-    for (var i = 0; i < this.blocks.length; i++) {
-      var block = this.blocks[i];
+  * @returns {object} the first block of type paragraph
+  */
+  function firstParagraph() {
+    for (var i = 0; i < blocks.length; i++) {
+      var block = blocks[i];
       if (block.type == 'paragraph') {
         return block;
       }
     }
     return null;
-  },
+  }
 
   /**
    * @returns {array} all paragraphs
    */
-  getParagraphs: function getParagraphs() {
+  function getParagraphs() {
     var paragraphs = [];
-    for (var i = 0; i < this.blocks.length; i++) {
-      var block = this.blocks[i];
+    for (var i = 0; i < blocks.length; i++) {
+      var block = blocks[i];
       if (block.type == 'paragraph') {
         paragraphs.push(block);
       }
     }
     return paragraphs;
-  },
+  }
 
   /**
    * @returns {object} the nth paragraph
    */
-  getParagraph: function getParagraph(n) {
+  function getParagraph(n) {
     return this.getParagraphs()[n];
-  },
+  }
 
   /**
    * @returns {object}
    */
-  getFirstImage: function getFirstImage() {
-    for (var i = 0; i < this.blocks.length; i++) {
-      var block = this.blocks[i];
+  function getFirstImage() {
+    for (var i = 0; i < blocks.length; i++) {
+      var block = blocks[i];
       if (block.type == 'image') {
         return new ImageView(block.url, block.dimensions.width, block.dimensions.height, block.alt);
       }
     }
     return null;
-  },
+  }
 
   /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   * @params {function} linkResolver - please read prismic.io online documentation about link resolvers
-   * @params {function} htmlSerializer optional HTML serializer to customize the output
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml(linkResolver, htmlSerializer) {
+  * Turns the fragment into a useable HTML version of it.
+  * If the native HTML code doesn't suit your design, this function is meant to be overriden.
+  * @params {function} linkResolver - please read prismic.io online documentation about link resolvers
+  * @params {function} htmlSerializer optional HTML serializer to customize the output
+  * @returns {string} - basic HTML code for the fragment
+  */
+  function asHtml(linkResolver, htmlSerializer) {
     var blockGroups = [],
         blockGroup,
         block,
@@ -2420,10 +2162,10 @@ StructuredText.prototype = {
         return ctx.linkResolver(ctx, doc, isBroken);
       };
     }
-    if (Array.isArray(this.blocks)) {
+    if (Array.isArray(blocks)) {
 
-      for (var i = 0; i < this.blocks.length; i++) {
-        block = this.blocks[i];
+      for (var i = 0; i < blocks.length; i++) {
+        block = blocks[i];
 
         // Resolve image links
         if (block.type == "image" && block.linkTo) {
@@ -2466,17 +2208,17 @@ StructuredText.prototype = {
     }
 
     return html.join('');
-  },
+  }
 
   /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
+  * Turns the fragment into a useable text version of it.
+  *
+  * @returns {string} - basic text version of the fragment
+  */
+  function asText() {
     var output = [];
-    for (var i = 0; i < this.blocks.length; i++) {
-      var block = this.blocks[i];
+    for (var i = 0; i < blocks.length; i++) {
+      var block = blocks[i];
       if (block.text) {
         output.push(block.text);
       }
@@ -2484,7 +2226,17 @@ StructuredText.prototype = {
     return output.join(' ');
   }
 
-};
+  return {
+    'value': blocks,
+    'title': getTitle(),
+    'firstParagraph': firstParagraph,
+    'paragraphs': getParagraphs,
+    'paragraph': getParagraph,
+    'firstImage': getFirstImage,
+    'asHtml': asHtml,
+    'asText': asText
+  };
+}
 
 function htmlEscape(input) {
   return input && input.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
@@ -2726,7 +2478,6 @@ SliceZone.prototype = {
  * @returns {object} - the object of the proper Fragments type.
  */
 function initField(field) {
-
   var classForType = {
     "Color": Color,
     "Number": Num,
@@ -2745,9 +2496,8 @@ function initField(field) {
     "Group": Group,
     "SliceZone": SliceZone
   };
-
   if (classForType[field.type]) {
-    return new classForType[field.type](field.value);
+    return classForType[field.type](field.value);
   }
 
   if (field.type === "Image") {
