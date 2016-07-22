@@ -1862,110 +1862,35 @@ function Embed(data) {
  * @global
  * @alias Fragments:ImageEl
  */
-function ImageEl(main, views) {
-  /**
-   * @field
-   * @description the main ImageView for this image
-   */
-  this.main = main;
+function Image(data) {
+  var main = data.main;
+  var views = data.views;
 
-  /**
-   * @field
-   * @description the url of the main ImageView for this image
-   */
-  this.url = main.url;
-
-  /**
-   * @field
-   * @description an array of all the other ImageViews for this image
-   */
-  this.views = views || {};
-}
-ImageEl.prototype = {
-  /**
-   * Gets the view of the image, from its name
-   *
-   * @param {string} name - the name of the view to get
-   * @returns {ImageView} - the proper view
-   */
-  getView: function getView(name) {
-    if (name === "main") {
-      return this.main;
-    } else {
-      return this.views[name];
-    }
-  },
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return this.main.asHtml();
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return "";
+  function asHtml(view) {
+    return '<img src="' + view.url + '" alt="' + view.alt + '" width="' + view.width + '" height="' + view.height + '" />';
   }
-};
 
-/**
- * Embodies an image view (an image in prismic.io can be defined with several different thumbnail sizes, each size is called a "view")
- * @constructor
- * @global
- * @alias Fragments:ImageView
- */
-function ImageView(url, width, height, alt) {
-  /**
-   * @field
-   * @description the URL of the ImageView (useable as it, in a <img> tag in HTML, for instance)
-   */
-  this.url = url;
-  /**
-   * @field
-   * @description the width of the ImageView
-   */
-  this.width = width;
-  /**
-   * @field
-   * @description the height of the ImageView
-   */
-  this.height = height;
-  /**
-   * @field
-   * @description the alt text for the ImageView
-   */
-  this.alt = alt;
-}
-ImageView.prototype = {
-  ratio: function ratio() {
-    return this.width / this.height;
-  },
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<img src=\"" + this.url + "\" width=\"" + this.width + "\" height=\"" + this.height + "\" alt=\"" + (this.alt || "") + "\">";
-  },
+  var output = {
+    'alt': main.alt,
+    'url': main.url,
+    'width': main.dimensions.width,
+    'height': main.dimensions.height,
+    'asHtml': asHtml.bind(null, main)
+  };
 
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return "";
+  for (var name in views) {
+    var img = views[name];
+    output[name] = {
+      'alt': img.alt,
+      'url': img.url,
+      'width': img.dimensions.width,
+      'height': img.dimensions.height,
+      'asHtml': asHtml.bind(null, img)
+    };
   }
-};
+
+  return output;
+}
 
 /**
  * Embodies a fragment of type "Separator" (only used in Slices)
@@ -2471,20 +2396,12 @@ function initField(field) {
     "Link.image": ImageLink,
     "Separator": Separator,
     "Group": Group,
-    "SliceZone": SliceZone
+    "SliceZone": SliceZone,
+    "Image": Image,
+    "Range": Num
   };
   if (classForType[field.type]) {
     return classForType[field.type](field.value);
-  }
-
-  if (field.type === "Image") {
-    var img = field.value.main;
-    var output = new ImageEl(new ImageView(img.url, img.dimensions.width, img.dimensions.height, img.alt), {});
-    for (var name in field.value.views) {
-      img = field.value.views[name];
-      output.views[name] = new ImageView(img.url, img.dimensions.width, img.dimensions.height, img.alt);
-    }
-    return output;
   }
 
   if (console && console.log) console.log("Fragment type not supported: ", field.type);
@@ -2568,8 +2485,7 @@ function serialize(element, content, htmlSerializer) {
 
 module.exports = {
   Embed: Embed,
-  Image: ImageEl,
-  ImageView: ImageView,
+  Image: Image,
   Text: Text,
   Number: Num,
   Date: DateFragment,
