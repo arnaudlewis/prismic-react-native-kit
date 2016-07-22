@@ -1702,7 +1702,7 @@ function DocumentLink(data) {
  */
 function WebLink(data) {
 
-  var url = data.value.url;
+  var url = data.url;
 
   function asHtml() {
     return '<a href="' + url + '">' + url + '</a>';
@@ -1741,41 +1741,17 @@ function FileLink(data) {
  * @alias Fragments:ImageLink
  */
 function ImageLink(data) {
-  /**
-   *
-   * @field
-   * @description the JSON object exactly as is returned in the "data" field of the JSON responses (see API documentation: https://developers.prismic.io/documentation/UjBe8bGIJ3EKtgBZ/api-documentation#json-responses)
-   */
-  this.value = data;
-}
-ImageLink.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml() {
-    return "<a href=\"" + this.url() + "\"><img src=\"" + this.url() + "\" alt=\"" + (this.alt || "") + "\"></a>";
-  },
-  /**
-   * Returns the URL of the link.
-   *
-   * @returns {string} - the proper URL to use
-   */
-  url: function url() {
-    return this.value.image.url;
-  },
+  var url = data.image.url;
 
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText() {
-    return this.url();
+  function asHtml() {
+    return '<a href="' + url + '"><img src="' + (url || '') + '" alt="' + (data.image.alt || '') + '" /></a>';
   }
-};
+
+  return {
+    'url': url,
+    'asHtml': asHtml
+  };
+}
 
 /**
  * Embodies a select fragment
@@ -1875,7 +1851,8 @@ function Embed(data) {
    */
   return {
     'value': data,
-    'html': oembed.html
+    'url': data.oembed.embed_url,
+    'html': data.oembed.html
   };
 }
 
