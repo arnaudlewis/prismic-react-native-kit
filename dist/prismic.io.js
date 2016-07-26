@@ -1399,34 +1399,42 @@ function Group(data) {
     return GroupDoc(doc);
   });
 
-  function getFirstImage() {
+  function firstImage() {
     return groupDocs.reduce(function (image, groupDoc) {
+      if (image) return image;
+
       for (var key in groupDoc) {
         var fragment = groupDoc[key];
-        if (image) return image;else {
-          if ('Image' === fragment.type) return fragment;else if ('StructuredText' === fragment.type) return fragment.firstImage();
-        }
+        var i = null;
+        if ('Image' === fragment.type) i = fragment;else if ('StructuredText' === fragment.type) i = fragment.firstImage();
+        if (i) return i;
       }
     }, null);
   }
 
-  function getFirstTitle() {
+  function firstTitle() {
     return groupDocs.reduce(function (title, groupDoc) {
+      if (title) return title;
+
       for (var key in groupDoc) {
         var fragment = groupDoc[key];
-        if (title) return title;else {
-          if ('StructuredText' === fragment.type) return fragment.firstTitle();
+        if ('StructuredText' === fragment.type) {
+          var t = fragment.firstTitle();
+          if (t) return t;
         }
       }
     }, null);
   }
 
-  function getFirstParagraph() {
+  function firstParagraph() {
     return groupDocs.reduce(function (paragraph, groupDoc) {
+      if (paragraph) return paragraph;
+
       for (var key in groupDoc) {
         var fragment = groupDoc[key];
-        if (paragraph) return paragraph;else {
-          if ('StructuredText' === fragment.type) return fragment.firstParagraph();
+        if ('StructuredText' === fragment.type) {
+          var p = fragment.firstParagraph();
+          if (p) return p;
         }
       }
     }, null);
@@ -1435,9 +1443,9 @@ function Group(data) {
   return {
     'type': 'Group',
     'docs': groupDocs,
-    'firstImage': getFirstImage,
-    'firstTitle': getFirstTitle,
-    'firstParagraph': getFirstParagraph
+    'firstImage': firstImage,
+    'firstTitle': firstTitle,
+    'firstParagraph': firstParagraph
   };
 }
 
@@ -1449,7 +1457,7 @@ function Group(data) {
  */
 function StructuredText(blocks) {
 
-  function getFirstTitle() {
+  function firstTitle() {
     for (var i = 0; i < blocks.length; i++) {
       var block = blocks[i];
       if (block.type.indexOf('heading') === 0) {
@@ -1496,7 +1504,7 @@ function StructuredText(blocks) {
   /**
    * @returns {object}
    */
-  function getFirstImage() {
+  function firstImage() {
     for (var i = 0; i < blocks.length; i++) {
       var block = blocks[i];
       if (block.type == 'image') {
@@ -1597,11 +1605,11 @@ function StructuredText(blocks) {
   return {
     'type': 'StructuredText',
     'value': blocks,
-    'firstTitle': getFirstTitle,
+    'firstTitle': firstTitle,
     'firstParagraph': firstParagraph,
     'paragraphs': getParagraphs,
     'paragraph': getParagraph,
-    'firstImage': getFirstImage,
+    'firstImage': firstImage,
     'asHtml': asHtml,
     'asText': asText
   };
