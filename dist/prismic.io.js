@@ -940,506 +940,13 @@ module.exports = {
 "use strict";
 
 /**
- * Functions to access fragments: superclass for Document and Doc (from Group), not supposed to be created directly
- * @constructor
- */
-
-function WithFragments() {}
-
-WithFragments.prototype = {
-  /**
-   * Gets the fragment in the current Document object. Since you most likely know the type
-   * of this fragment, it is advised that you use a dedicated method, like get StructuredText() or getDate(),
-   * for instance.
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "blog-post.author"
-   * @returns {object} - The JavaScript Fragment object to manipulate
-   */
-  get: function get(name) {
-    var frags = this._getFragments(name);
-    return frags.length ? frags[0] : null;
-  },
-
-  /**
-   * Builds an array of all the fragments in case they are multiple.
-   *
-   * @param {string} name - The name of the multiple fragment to get, with its type; for instance, "blog-post.author"
-   * @returns {array} - An array of each JavaScript fragment object to manipulate.
-   */
-  getAll: function getAll(name) {
-    return this._getFragments(name);
-  },
-
-  /**
-   * Gets the image fragment in the current Document object, for further manipulation.
-   *
-   * @example document.getImage('blog-post.photo').asHtml(linkResolver)
-   *
-   * @param {string} fragment - The name of the fragment to get, with its type; for instance, "blog-post.photo"
-   * @returns {ImageEl} - The Image object to manipulate
-   */
-  getImage: function getImage(fragment) {
-    var Fragments = require('./fragments');
-    var img = this.get(fragment);
-    if (img instanceof Fragments.Image) {
-      return img;
-    }
-    if (img instanceof Fragments.StructuredText) {
-      // find first image in st.
-      return img;
-    }
-    return null;
-  },
-
-  // Useful for obsolete multiples
-  getAllImages: function getAllImages(fragment) {
-    var Fragments = require('./fragments');
-    var images = this.getAll(fragment);
-
-    return images.map(function (image) {
-      if (image instanceof Fragments.Image) {
-        return image;
-      }
-      if (image instanceof Fragments.StructuredText) {
-        throw new Error("Not done.");
-      }
-      return null;
-    });
-  },
-
-  getFirstImage: function getFirstImage() {
-    var Fragments = require('./fragments');
-    var fragments = this.fragments;
-
-    var firstImage = Object.keys(fragments).reduce(function (image, key) {
-      if (image) {
-        return image;
-      } else {
-        var element = fragments[key];
-        if (typeof element.getFirstImage === "function") {
-          return element.getFirstImage();
-        } else if (element instanceof Fragments.Image) {
-          return element;
-        } else return null;
-      }
-    }, null);
-    return firstImage;
-  },
-
-  getFirstTitle: function getFirstTitle() {
-    var Fragments = require('./fragments');
-    var fragments = this.fragments;
-
-    var firstTitle = Object.keys(fragments).reduce(function (st, key) {
-      if (st) {
-        return st;
-      } else {
-        var element = fragments[key];
-        if (typeof element.getFirstTitle === "function") {
-          return element.getFirstTitle();
-        } else if (element instanceof Fragments.StructuredText) {
-          return element.getTitle();
-        } else return null;
-      }
-    }, null);
-    return firstTitle;
-  },
-
-  getFirstParagraph: function getFirstParagraph() {
-    var fragments = this.fragments;
-
-    var firstParagraph = Object.keys(fragments).reduce(function (st, key) {
-      if (st) {
-        return st;
-      } else {
-        var element = fragments[key];
-        if (typeof element.getFirstParagraph === "function") {
-          return element.getFirstParagraph();
-        } else return null;
-      }
-    }, null);
-    return firstParagraph;
-  },
-
-  /**
-   * Gets the view within the image fragment in the current Document object, for further manipulation.
-   *
-   * @example document.getImageView('blog-post.photo', 'large').asHtml(linkResolver)
-   *
-   * @param {string} name- The name of the fragment to get, with its type; for instance, "blog-post.photo"
-   * @returns {ImageView} view - The View object to manipulate
-   */
-  getImageView: function getImageView(name, view) {
-    var Fragments = require('./fragments');
-    var fragment = this.get(name);
-    if (fragment instanceof Fragments.Image) {
-      return fragment.getView(view);
-    }
-    if (fragment instanceof Fragments.StructuredText) {
-      for (var i = 0; i < fragment.blocks.length; i++) {
-        if (fragment.blocks[i].type == 'image') {
-          return fragment.blocks[i];
-        }
-      }
-    }
-    return null;
-  },
-
-  // Useful for obsolete multiples
-  getAllImageViews: function getAllImageViews(name, view) {
-    return this.getAllImages(name).map(function (image) {
-      return image.getView(view);
-    });
-  },
-
-  /**
-   * Gets the timestamp fragment in the current Document object, for further manipulation.
-   *
-   * @example document.getDate('blog-post.publicationdate').asHtml(linkResolver)
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "blog-post.publicationdate"
-   * @returns {Date} - The Date object to manipulate
-   */
-  getTimestamp: function getTimestamp(name) {
-    var Fragments = require('./fragments');
-    var fragment = this.get(name);
-
-    if (fragment instanceof Fragments.Timestamp) {
-      return fragment.value;
-    }
-    return null;
-  },
-
-  /**
-   * Gets the date fragment in the current Document object, for further manipulation.
-   *
-   * @example document.getDate('blog-post.publicationdate').asHtml(linkResolver)
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "blog-post.publicationdate"
-   * @returns {Date} - The Date object to manipulate
-   */
-  getDate: function getDate(name) {
-    var Fragments = require('./fragments');
-    var fragment = this.get(name);
-
-    if (fragment instanceof Fragments.Date) {
-      return fragment.value;
-    }
-    return null;
-  },
-
-  /**
-   * Gets a boolean value of the fragment in the current Document object, for further manipulation.
-   * This works great with a Select fragment. The Select values that are considered true are (lowercased before matching): 'yes', 'on', and 'true'.
-   *
-   * @example if(document.getBoolean('blog-post.enableComments')) { ... }
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "blog-post.enableComments"
-   * @returns {boolean} - The boolean value of the fragment
-   */
-  getBoolean: function getBoolean(name) {
-    var fragment = this.get(name);
-    return fragment.value && (fragment.value.toLowerCase() == 'yes' || fragment.value.toLowerCase() == 'on' || fragment.value.toLowerCase() == 'true');
-  },
-
-  /**
-   * Gets the text fragment in the current Document object, for further manipulation.
-   * The method works with StructuredText fragments, Text fragments, Number fragments, Select fragments and Color fragments.
-   *
-   * @example document.getText('blog-post.label').asHtml(linkResolver).
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "blog-post.label"
-   * @param {string} after - a suffix that will be appended to the value
-   * @returns {object} - either StructuredText, or Text, or Number, or Select, or Color.
-   */
-  getText: function getText(name, after) {
-    var Fragments = require('./fragments');
-    var fragment = this.get(name);
-
-    if (fragment instanceof Fragments.StructuredText) {
-      return fragment.blocks.map(function (block) {
-        if (block.text) {
-          return block.text + (after ? after : '');
-        }
-        return '';
-      }).join('\n');
-    }
-
-    if (fragment instanceof Fragments.Text) {
-      if (fragment.value) {
-        return fragment.value + (after ? after : '');
-      }
-    }
-
-    if (fragment instanceof Fragments.Number) {
-      if (fragment.value) {
-        return fragment.value + (after ? after : '');
-      }
-    }
-
-    if (fragment instanceof Fragments.Select) {
-      if (fragment.value) {
-        return fragment.value + (after ? after : '');
-      }
-    }
-
-    if (fragment instanceof Fragments.Color) {
-      if (fragment.value) {
-        return fragment.value + (after ? after : '');
-      }
-    }
-
-    return null;
-  },
-
-  /**
-   * Gets the StructuredText fragment in the current Document object, for further manipulation.
-   * @example document.getStructuredText('blog-post.body').asHtml(linkResolver)
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "blog-post.body"
-   * @returns {StructuredText} - The StructuredText fragment to manipulate.
-   */
-  getStructuredText: function getStructuredText(name) {
-    var fragment = this.get(name);
-
-    if (fragment instanceof require('./fragments').StructuredText) {
-      return fragment;
-    }
-    return null;
-  },
-
-  /**
-   * Gets the Link fragment in the current Document object, for further manipulation.
-   * @example document.getLink('blog-post.link').url(resolver)
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "blog-post.link"
-   * @returns {WebLink|DocumentLink|ImageLink} - The Link fragment to manipulate.
-   */
-  getLink: function getLink(name) {
-    var Fragments = require('./fragments');
-    var fragment = this.get(name);
-
-    if (fragment instanceof Fragments.WebLink || fragment instanceof Fragments.DocumentLink || fragment instanceof Fragments.FileLink || fragment instanceof Fragments.ImageLink) {
-      return fragment;
-    }
-    return null;
-  },
-
-  /**
-   * Gets the Number fragment in the current Document object, for further manipulation.
-   * @example document.getNumber('product.price')
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "product.price"
-   * @returns {number} - The number value of the fragment.
-   */
-  getNumber: function getNumber(name) {
-    var Fragments = require('./fragments');
-    var fragment = this.get(name);
-
-    if (fragment instanceof Fragments.Number) {
-      return fragment.value;
-    }
-    return null;
-  },
-
-  /**
-   * Gets the Color fragment in the current Document object, for further manipulation.
-   * @example document.getColor('product.color')
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "product.color"
-   * @returns {string} - The string value of the Color fragment.
-   */
-  getColor: function getColor(name) {
-    var Fragments = require('./fragments');
-    var fragment = this.get(name);
-
-    if (fragment instanceof Fragments.Color) {
-      return fragment.value;
-    }
-    return null;
-  },
-
-  /** Gets the GeoPoint fragment in the current Document object, for further manipulation.
-   *
-   * @example document.getGeoPoint('blog-post.location').asHtml(linkResolver)
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "blog-post.location"
-   * @returns {GeoPoint} - The GeoPoint object to manipulate
-   */
-  getGeoPoint: function getGeoPoint(name) {
-    var Fragments = require('./fragments');
-    var fragment = this.get(name);
-
-    if (fragment instanceof Fragments.GeoPoint) {
-      return fragment;
-    }
-    return null;
-  },
-
-  /**
-   * Gets the Group fragment in the current Document object, for further manipulation.
-   *
-   * @example document.getGroup('product.gallery').asHtml(linkResolver).
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "product.gallery"
-   * @returns {Group} - The Group fragment to manipulate.
-   */
-  getGroup: function getGroup(name) {
-    var fragment = this.get(name);
-
-    if (fragment instanceof require('./fragments').Group) {
-      return fragment;
-    }
-    return null;
-  },
-
-  /**
-   * Shortcut to get the HTML output of the fragment in the current document.
-   * This is the same as writing document.get(fragment).asHtml(linkResolver);
-   *
-   * @param {string} name - The name of the fragment to get, with its type; for instance, "blog-post.body"
-   * @param {function} linkResolver
-   * @returns {string} - The HTML output
-   */
-  getHtml: function getHtml(name, linkResolver) {
-    if (!isFunction(linkResolver)) {
-      // Backward compatibility with the old ctx argument
-      var ctx = linkResolver;
-      linkResolver = function linkResolver(doc, isBroken) {
-        return ctx.linkResolver(ctx, doc, isBroken);
-      };
-    }
-    var fragment = this.get(name);
-
-    if (fragment && fragment.asHtml) {
-      return fragment.asHtml(linkResolver);
-    }
-    return null;
-  },
-
-  /**
-   * Transforms the whole document as an HTML output. Each fragment is separated by a &lt;section&gt; tag,
-   * with the attribute data-field="nameoffragment"
-   * Note that most of the time you will not use this method, but read fragment independently and generate
-   * HTML output for {@link StructuredText} fragment with that class' asHtml method.
-   *
-   * @param {function} linkResolver
-   * @returns {string} - The HTML output
-   */
-  asHtml: function asHtml(linkResolver) {
-    if (!isFunction(linkResolver)) {
-      // Backward compatibility with the old ctx argument
-      var ctx = linkResolver;
-      linkResolver = function linkResolver(doc, isBroken) {
-        return ctx.linkResolver(ctx, doc, isBroken);
-      };
-    }
-    var htmls = [];
-    for (var field in this.fragments) {
-      var fragment = this.get(field);
-      htmls.push(fragment && fragment.asHtml ? '<section data-field="' + field + '">' + fragment.asHtml(linkResolver) + '</section>' : '');
-    }
-    return htmls.join('');
-  },
-
-  /**
-   * Turns the document into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText(linkResolver) {
-    if (!isFunction(linkResolver)) {
-      // Backward compatibility with the old ctx argument
-      var ctx = linkResolver;
-      linkResolver = function linkResolver(doc, isBroken) {
-        return ctx.linkResolver(ctx, doc, isBroken);
-      };
-    }
-    var texts = [];
-    for (var field in this.fragments) {
-      var fragment = this.get(field);
-      texts.push(fragment && fragment.asText ? fragment.asText(linkResolver) : '');
-    }
-    return texts.join('');
-  },
-
-  /**
-   * Linked documents, as an array of {@link DocumentLink}
-   * @returns {Array}
-   */
-  linkedDocuments: function linkedDocuments() {
-    var i, j, link;
-    var result = [];
-    var Fragments = require('./fragments');
-    for (var field in this.data) {
-      var fragment = this.get(field);
-      if (fragment instanceof Fragments.DocumentLink) {
-        result.push(fragment);
-      }
-      if (fragment instanceof Fragments.StructuredText) {
-        for (i = 0; i < fragment.blocks.length; i++) {
-          var block = fragment.blocks[i];
-          if (block.type == "image" && block.linkTo) {
-            link = Fragments.initField(block.linkTo);
-            if (link instanceof Fragments.DocumentLink) {
-              result.push(link);
-            }
-          }
-          var spans = block.spans || [];
-          for (j = 0; j < spans.length; j++) {
-            var span = spans[j];
-            if (span.type == "hyperlink") {
-              link = Fragments.initField(span.data);
-              if (link instanceof Fragments.DocumentLink) {
-                result.push(link);
-              }
-            }
-          }
-        }
-      }
-      if (fragment instanceof Fragments.Group) {
-        for (i = 0; i < fragment.value.length; i++) {
-          result = result.concat(fragment.value[i].linkedDocuments());
-        }
-      }
-      if (fragment instanceof Fragments.SliceZone) {
-        for (i = 0; i < fragment.value.length; i++) {
-          var slice = fragment.value[i];
-          if (slice.value instanceof Fragments.DocumentLink) {
-            result.push(slice.value);
-          }
-        }
-      }
-    }
-    return result;
-  },
-
-  /**
-   * An array of the fragments with the given fragment name.
-   * The array is often a single-element array, expect when the fragment is a multiple fragment.
-   * @private
-   */
-  _getFragments: function _getFragments(name) {
-    if (!this.fragments || !this.fragments[name]) {
-      return [];
-    }
-
-    if (Array.isArray(this.fragments[name])) {
-      return this.fragments[name];
-    } else {
-      return [this.fragments[name]];
-    }
-  }
-
-};
-
-/**
  * Embodies a document as returned by the API.
  * Most useful fields: id, type, tags, slug, slugs
  * @constructor
  * @global
  * @alias Doc
  */
+
 function Document(id, uid, type, href, tags, slugs, data) {
   var doc = {
     /**
@@ -1500,35 +1007,18 @@ function fieldKey(key, docType) {
   }
 }
 
-/**
- * Gets the SliceZone fragment in the current Document object, for further manipulation.
- *
- * @example document.getSliceZone('product.gallery').asHtml(linkResolver).
- *
- * @param {string} name - The name of the fragment to get, with its type; for instance, "product.gallery"
- * @returns {Group} - The SliceZone fragment to manipulate.
- */
-Document.prototype.getSliceZone = function (name) {
-  var fragment = this.get(name);
-
-  if (fragment instanceof require('./fragments').SliceZone) {
-    return fragment;
-  }
-  return null;
-};
-
 function GroupDoc(data) {
-  /**
-   * The original JSON data from the API
-   */
-  this.data = data;
-  /**
-   * Fragments, converted to business objects
-   */
-  this.fragments = require('./fragments').parseFragments(data);
+  var doc = {
+    'data': data
+  };
+  var fragments = require('./fragments').parseFragments(data);
+  for (var key in fragments) {
+    if (fragments.hasOwnProperty(key)) {
+      doc[key] = fragments[key];
+    }
+  }
+  return doc;
 }
-
-GroupDoc.prototype = Object.create(WithFragments.prototype);
 
 // -- Private helpers
 
@@ -1538,7 +1028,6 @@ function isFunction(f) {
 }
 
 module.exports = {
-  WithFragments: WithFragments,
   Document: Document,
   GroupDoc: GroupDoc
 };
@@ -1632,6 +1121,8 @@ module.exports = {
 },{}],7:[function(require,module,exports){
 "use strict";
 
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 var documents = require('./documents');
 var WithFragments = documents.WithFragments,
     GroupDoc = documents.GroupDoc;
@@ -1652,6 +1143,8 @@ function Text(data) {
  * @alias Fragments:DocumentLink
  */
 function DocumentLink(data) {
+  var _ref;
+
   var fragmentsData = {};
   if (data.document.data) {
     for (var field in data.document.data[data.document.type]) {
@@ -1667,31 +1160,14 @@ function DocumentLink(data) {
     return '<a href="' + url(ctx) + '">' + url(ctx) + '</a>';
   }
 
-  return {
+  return _ref = {
+    'type': 'DocumentLink',
     'document': data.document,
     'id': data.document.id,
     'uid': data.document.uid,
     'tags': data.document.tags,
-    'slug': data.document.slug,
-    /**
-     * @field
-     * @description the linked document type
-     */
-    'type': data.document.type,
-    'data': data,
-    /**
-     * @field
-     * @description the fragment list, if the fetchLinks parameter was used in at query time
-     */
-    'fragments': parseFragments(fragmentsData),
-    /**
-     * @field
-     * @description true if the link is broken, false otherwise
-     */
-    'isBroken': data.isBroken,
-    'asHtml': asHtml,
-    'url': url
-  };
+    'slug': data.document.slug
+  }, _defineProperty(_ref, 'type', data.document.type), _defineProperty(_ref, 'data', data), _defineProperty(_ref, 'fragments', parseFragments(fragmentsData)), _defineProperty(_ref, 'isBroken', data.isBroken), _defineProperty(_ref, 'asHtml', asHtml), _defineProperty(_ref, 'url', url), _ref;
 }
 
 /**
@@ -1709,6 +1185,7 @@ function WebLink(data) {
   }
 
   return {
+    'type': 'WebLink',
     'url': url,
     'asHtml': asHtml
   };
@@ -1729,6 +1206,7 @@ function FileLink(data) {
   }
 
   return {
+    'type': 'FileLink',
     'url': url,
     'asHtml': asHtml
   };
@@ -1748,6 +1226,7 @@ function ImageLink(data) {
   }
 
   return {
+    'type': 'ImageLink',
     'url': url,
     'asHtml': asHtml
   };
@@ -1786,6 +1265,7 @@ function Color(data) {
 function GeoPoint(data) {
   if (data) {
     return {
+      'type': 'GeoPoint',
       'latitude': data.latitude,
       'longitude': data.longitude
     };
@@ -1850,6 +1330,7 @@ function Embed(data) {
    * @description the JSON object exactly as is returned in the "data" field of the JSON responses (see API documentation: https://developers.prismic.io/documentation/UjBe8bGIJ3EKtgBZ/api-documentation#json-responses)
    */
   return {
+    'type': 'Embed',
     'value': data,
     'url': data.oembed.embed_url,
     'html': data.oembed.html
@@ -1871,6 +1352,7 @@ function Image(data) {
   }
 
   var output = {
+    'type': 'Image',
     'alt': main.alt,
     'url': main.url,
     'width': main.dimensions.width,
@@ -1913,72 +1395,51 @@ function Separator() {
  * @alias Fragments:Group
  */
 function Group(data) {
-  this.value = [];
-  for (var i = 0; i < data.length; i++) {
-    this.value.push(new GroupDoc(data[i]));
+  var groupDocs = data.map(function (doc) {
+    return GroupDoc(doc);
+  });
+
+  function getFirstImage() {
+    return groupDocs.reduce(function (image, groupDoc) {
+      for (var key in groupDoc) {
+        var fragment = groupDoc[key];
+        if (image) return image;else {
+          if ('Image' === fragment.type) return fragment;else if ('StructuredText' === fragment.type) return fragment.firstImage();
+        }
+      }
+    }, null);
   }
+
+  function getFirstTitle() {
+    return groupDocs.reduce(function (title, groupDoc) {
+      for (var key in groupDoc) {
+        var fragment = groupDoc[key];
+        if (title) return title;else {
+          if ('StructuredText' === fragment.type) return fragment.firstTitle();
+        }
+      }
+    }, null);
+  }
+
+  function getFirstParagraph() {
+    return groupDocs.reduce(function (paragraph, groupDoc) {
+      for (var key in groupDoc) {
+        var fragment = groupDoc[key];
+        if (paragraph) return paragraph;else {
+          if ('StructuredText' === fragment.type) return fragment.firstParagraph();
+        }
+      }
+    }, null);
+  }
+
+  return {
+    'type': 'Group',
+    'docs': groupDocs,
+    'firstImage': getFirstImage,
+    'firstTitle': getFirstTitle,
+    'firstParagraph': getFirstParagraph
+  };
 }
-Group.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   * @params {function} linkResolver - linkResolver function (please read prismic.io online documentation about this)
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml(linkResolver) {
-    var output = "";
-    for (var i = 0; i < this.value.length; i++) {
-      output += this.value[i].asHtml(linkResolver);
-    }
-    return output;
-  },
-  /**
-   * Turns the Group fragment into an array in order to access its items (groups of fragments),
-   * or to loop through them.
-   * @params {object} ctx - mandatory ctx object, with a useable linkResolver function (please read prismic.io online documentation about this)
-   * @returns {Array} - the array of groups, each group being a JSON object with subfragment name as keys, and subfragment as values
-   */
-  toArray: function toArray() {
-    return this.value;
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText(linkResolver) {
-    var output = "";
-    for (var i = 0; i < this.value.length; i++) {
-      output += this.value[i].asText(linkResolver) + '\n';
-    }
-    return output;
-  },
-
-  getFirstImage: function getFirstImage() {
-    return this.toArray().reduce(function (image, fragment) {
-      if (image) return image;else {
-        return fragment.getFirstImage();
-      }
-    }, null);
-  },
-
-  getFirstTitle: function getFirstTitle() {
-    return this.toArray().reduce(function (st, fragment) {
-      if (st) return st;else {
-        return fragment.getFirstTitle();
-      }
-    }, null);
-  },
-
-  getFirstParagraph: function getFirstParagraph() {
-    return this.toArray().reduce(function (st, fragment) {
-      if (st) return st;else {
-        return fragment.getFirstParagraph();
-      }
-    }, null);
-  }
-};
 
 /**
  * Embodies a structured text fragment
@@ -1988,7 +1449,7 @@ Group.prototype = {
  */
 function StructuredText(blocks) {
 
-  function getTitle() {
+  function getFirstTitle() {
     for (var i = 0; i < blocks.length; i++) {
       var block = blocks[i];
       if (block.type.indexOf('heading') === 0) {
@@ -2039,7 +1500,12 @@ function StructuredText(blocks) {
     for (var i = 0; i < blocks.length; i++) {
       var block = blocks[i];
       if (block.type == 'image') {
-        return new ImageView(block.url, block.dimensions.width, block.dimensions.height, block.alt);
+        return {
+          'url': block.url,
+          'alt': block.alt,
+          'width': block.dimensions.width,
+          'height': block.dimensions.height
+        };
       }
     }
     return null;
@@ -2129,8 +1595,9 @@ function StructuredText(blocks) {
   }
 
   return {
+    'type': 'StructuredText',
     'value': blocks,
-    'title': getTitle(),
+    'firstTitle': getFirstTitle,
     'firstParagraph': firstParagraph,
     'paragraphs': getParagraphs,
     'paragraph': getParagraph,
@@ -2241,64 +1708,45 @@ function insertSpans(text, spans, linkResolver, htmlSerializer) {
  * @global
  * @alias Fragments:Slice
  */
-function Slice(sliceType, label, value) {
-  this.sliceType = sliceType;
-  this.label = label;
-  this.value = value;
-}
+function Slice(data) {
+  var sliceType = data['slice_type'];
+  var fragment = initField(data['value']);
+  var label = data['slice_label'] || null;
 
-Slice.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml(linkResolver) {
-    var classes = ['slice'];
-    if (this.label) classes.push(this.label);
-    return '<div data-slicetype="' + this.sliceType + '" class="' + classes.join(' ') + '">' + this.value.asHtml(linkResolver) + '</div>';
-  },
-
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText(linkResolver) {
-    return this.value.asText(linkResolver);
-  },
-
-  /**
-   * Get the first Image in slice.
-   * @returns {object}
-   */
-  getFirstImage: function getFirstImage() {
-    var fragment = this.value;
-    if (typeof fragment.getFirstImage === "function") {
-      return fragment.getFirstImage();
-    } else if (fragment instanceof ImageEl) {
-      return fragment;
-    } else return null;
-  },
-
-  getFirstTitle: function getFirstTitle() {
-    var fragment = this.value;
-    if (typeof fragment.getFirstTitle === "function") {
-      return fragment.getFirstTitle();
-    } else if (fragment instanceof StructuredText) {
-      return fragment.getTitle();
-    } else return null;
-  },
-
-  getFirstParagraph: function getFirstParagraph() {
-    var fragment = this.value;
-    if (typeof fragment.getFirstParagraph === "function") {
-      return fragment.getFirstParagraph();
-    } else return null;
+  function firstImage() {
+    if ("Group" === fragment.type || "StructuredText" === fragment.type) {
+      return fragment.firstImage();
+    } else {
+      return null;
+    }
   }
 
-};
+  function firstTitle() {
+    if ("Group" === fragment.type || "StructuredText" === fragment.type) {
+      return fragment.firstTitle();
+    } else {
+      return null;
+    }
+  }
+
+  function firstParagraph() {
+    if ("Group" === fragment.type || "StructuredText" === fragment.type) {
+      return fragment.firstParagraph();
+    } else {
+      return null;
+    }
+  }
+
+  return {
+    "type": "Slice",
+    'sliceType': sliceType,
+    'label': label,
+    'value': data,
+    'firstTitle': firstTitle,
+    'firstImage': firstImage,
+    'firstParagraph': firstParagraph
+  };
+}
 
 /**
  * Embodies a SliceZone fragment
@@ -2307,70 +1755,44 @@ Slice.prototype = {
  * @alias Fragments:SliceZone
  */
 function SliceZone(data) {
-  this.value = [];
-  for (var i = 0; i < data.length; i++) {
-    var sliceType = data[i]['slice_type'];
-    var fragment = initField(data[i]['value']);
-    var label = data[i]['slice_label'] || null;
-    if (sliceType && fragment) {
-      this.value.push(new Slice(sliceType, label, fragment));
-    }
-  }
-  this.slices = this.value;
-}
 
-SliceZone.prototype = {
-  /**
-   * Turns the fragment into a useable HTML version of it.
-   * If the native HTML code doesn't suit your design, this function is meant to be overriden.
-   *
-   * @returns {string} - basic HTML code for the fragment
-   */
-  asHtml: function asHtml(linkResolver) {
-    var output = "";
-    for (var i = 0; i < this.value.length; i++) {
-      output += this.value[i].asHtml(linkResolver);
-    }
-    return output;
-  },
+  var checkedData = data || [];
+  var slices = checkedData.map(function (sliceData) {
+    return Slice(sliceData);
+  });
 
-  /**
-   * Turns the fragment into a useable text version of it.
-   *
-   * @returns {string} - basic text version of the fragment
-   */
-  asText: function asText(linkResolver) {
-    var output = "";
-    for (var i = 0; i < this.value.length; i++) {
-      output += this.value[i].asText(linkResolver) + '\n';
-    }
-    return output;
-  },
-
-  getFirstImage: function getFirstImage() {
-    return this.value.reduce(function (image, slice) {
+  function firstImage() {
+    return slices.reduce(function (image, slice) {
       if (image) return image;else {
-        return slice.getFirstImage();
-      }
-    }, null);
-  },
-
-  getFirstTitle: function getFirstTitle() {
-    return this.value.reduce(function (text, slice) {
-      if (text) return text;else {
-        return slice.getFirstTitle();
-      }
-    }, null);
-  },
-
-  getFirstParagraph: function getFirstParagraph() {
-    return this.value.reduce(function (paragraph, slice) {
-      if (paragraph) return paragraph;else {
-        return slice.getFirstParagraph();
+        return slice.firstImage();
       }
     }, null);
   }
-};
+
+  function firstTitle() {
+    return slices.reduce(function (text, slice) {
+      if (text) return text;else {
+        return slice.firstTitle();
+      }
+    }, null);
+  }
+
+  function firstParagraph() {
+    return slices.reduce(function (paragraph, slice) {
+      if (paragraph) return paragraph;else {
+        return slice.firstParagraph();
+      }
+    }, null);
+  }
+
+  return {
+    'type': 'SliceZone',
+    'slices': slices,
+    'firstTitle': firstTitle,
+    'firstImage': firstImage,
+    'firstParagraph': firstParagraph
+  };
+}
 
 /**
  * From a fragment's name, casts it into the proper object type (like Prismic.Fragments.StructuredText)
