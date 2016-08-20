@@ -13,9 +13,10 @@
 #### NPM
 
 ```sh
-npm install prismic.io --save
+npm install alw-prismic.io --save
 ```
 
+<<<<<<< HEAD
 #### CDN
 
 ```
@@ -38,15 +39,14 @@ The kit is universal, it can be used:
 
 For new project, you can start from a sample project:
 
-* [Node.js project](https://github.com/prismicio/nodejs-sdk)
-* [Node.js blog](https://github.com/prismicio/nodejs-blog)
+* [Node.js project](https://github.com/arnaudlewis/jskit-demo)
 
 ### Usage
 
 To fetch documents from your repository, you need to fetch the Api data first.
 
 ```javascript
-var Prismic = require('prismic.io');
+var Prismic = require('alw-prismic.io');
 
 Prismic.api("http://your_repository_name.prismic.io/api", function(error, api) {
   var options = {}; // In Node.js, pass the request as 'req' to read the reference from the cookies
