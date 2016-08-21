@@ -1745,7 +1745,7 @@ function Slice(data) {
     }
   }
 
-  return {
+  var slice = {
     "type": "Slice",
     'sliceType': sliceType,
     'label': label,
@@ -1754,6 +1754,14 @@ function Slice(data) {
     'firstImage': firstImage,
     'firstParagraph': firstParagraph
   };
+
+  var fragments = require('./fragments').parseFragments(fragment);
+  for (var key in fragments) {
+    if (fragments.hasOwnProperty(key)) {
+      slice[key] = fragments[key];
+    }
+  }
+  return slice;
 }
 
 /**
@@ -1937,7 +1945,7 @@ module.exports = {
   insertSpans: insertSpans
 };
 
-},{"./documents":5}],8:[function(require,module,exports){
+},{"./documents":5,"./fragments":7}],8:[function(require,module,exports){
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
@@ -10750,7 +10758,7 @@ module.exports={
     "content",
     "api"
   ],
-  "version": "4.0.0",
+  "version": "4.0.1",
   "devDependencies": {
     "babel-preset-es2015": "^6.9.0",
     "babelify": "^7.2.0",
