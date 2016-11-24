@@ -2,7 +2,7 @@
   "name": "alw-prismic.io",
   "description": "JavaScript development kit for prismic.io",
   "license": "Apache-2.0",
-  "url": "https://github.com/prismicio/javascript-kit",
+  "url": "https://github.com/arnaudlewis/prismic-jskit-v4",
   "keywords": [
     "prismic",
     "prismic.io",
@@ -12,6 +12,8 @@
   ],
   "version": "4.1.0",
   "devDependencies": {
+    "babel-core": "^6.18.2",
+    "babel-loader": "^6.2.8",
     "babel-preset-es2015": "^6.9.0",
     "babelify": "^7.2.0",
     "browserify": "^12.0.1",
@@ -21,21 +23,24 @@
     "eslint": "^2.12.0",
     "istanbul": "^0.4.4",
     "jsdoc": "^3.4.0",
+    "json-loader": "^0.5.4",
     "mocha": "*",
     "rimraf": "^2.5.4",
     "uglify-js": "^2.6.1",
     "vinyl-buffer": "^1.0.0",
-    "vinyl-source-stream": "^1.1.0"
+    "vinyl-source-stream": "^1.1.0",
+    "webpack": "^1.13.3",
+    "webpack-dev-server": "^1.16.2"
   },
   "repository": {
     "type": "git",
-    "url": "http://github.com/prismicio/javascript-kit.git"
+    "url": "http://github.com/arnaudlewis/jprismic-jskit-v4.git"
   },
   "main": "lib/prismic.js",
   "scripts": {
-    "build": "scripts/browser.js",
+    "build": "webpack -p",
     "postbuild": "npm run docs",
-    "watch": "nodemon --watch ./lib --exec \"./scripts/browser.js\"",
+    "watch": "webpack-dev-server --progress --profile --colors --hot",
     "uglify": "uglifyjs -c -o=dist/prismic.io.min.js dist/prismic.io.js",
     "preuglify": "npm run build",
     "prepublish": "npm run uglify",

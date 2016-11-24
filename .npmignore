@@ -141,5 +141,5 @@ jspm_packages
 # Yarn Integrity file
 .yarn-integrity
 
-### Build ###
-dist/
+### Source maps ###
+dist/*.map
