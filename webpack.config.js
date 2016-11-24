@@ -7,6 +7,10 @@ module.exports = {
   output: {
     path: './dist/',
     filename: 'prismic.io.js',
+    // export itself to a global var
+    library: 'Prismic',
+    libraryTarget: 'umd',
+    umdNamedDefine: true
   },
   devtool: 'source-map',
   module: {

@@ -1,7 +1,7 @@
 /*eslint-env node, mocha */
 /*eslint no-unused-vars: 0 */
 
-var Prismic = require('../lib/prismic.js').Prismic;
+var Prismic = require('../dist/prismic.io.js');
 var chai = require('chai');
 
 var assert = chai.assert;

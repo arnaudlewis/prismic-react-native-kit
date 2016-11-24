@@ -37,9 +37,9 @@
     "type": "git",
     "url": "http://github.com/arnaudlewis/jprismic-jskit-v4.git"
   },
-  "main": "lib/prismic.js",
+  "main": "dist/prismic.io.min.js",
   "scripts": {
-    "build": "webpack -p",
+    "build": "webpack",
     "postbuild": "npm run docs",
     "watch": "webpack-dev-server --progress --profile --colors --hot",
     "uglify": "uglifyjs -c -o=dist/prismic.io.min.js dist/prismic.io.js",
