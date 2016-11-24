@@ -44,5 +44,8 @@
     "posttest": "eslint lib",
     "predocs": "rimraf ./docs",
     "docs": "jsdoc dist/prismic.io.js README.md -d docs"
+  },
+  "dependencies": {
+    "ramda": "^0.22.1"
   }
 }
