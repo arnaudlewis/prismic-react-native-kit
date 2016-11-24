@@ -13,7 +13,7 @@ deploy:
   on:
     tags: true
     branch: master
-    repo: prismicio/javascript-kit
+    repo: arnaudlewis/prismic-jskit-v4
 after_script:
 - codeclimate < coverage/lcov.info
 addons:
