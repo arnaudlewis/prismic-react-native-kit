@@ -67,13 +67,13 @@ The kit is universal, it can be used:
 * Client-side with a simple script tag
 
 ## Documentation
-In this kit, everything is similar to the official Prismic javascript-kit except on the template part.
-In each case, you will have a snippet of the custom type and one of your code in a JS Template.
-We'll consider that we have a `doc' parameter in each template snippet corresponding to the fetched prismic document.
-Don't need to prevent Runtime exception for complex JSON object, the kit take care of that for your with default value if the fragment is missing from the API.
+In this kit, everything is similar to the official Prismic javascript-kit except for the template part.
 
+You don't need to prevent any Runtime exceptions in your templates, the kit takes care of that for you by providing default values if the fragment is missing from the API.
 For basic fragments like Text, Date, Number... the default value will be `null`.
-For Complex fragments like Embed, StructuredText, Links... the default value will be an Object with a special key `_default` set to `true` and all the usual deepest values or functions will return null or empty array.
+For Complex fragments like Embed, StructuredText, Links... the default value will be an Object with a special key `_default` set to `true` and all the usual values or functions will return as `null` or as an empty array.
+
+Here is an example:
 
 **doc.myStructuredText**
 
@@ -103,6 +103,10 @@ doc.myStructuredText.asHtml()
 /* return value */
 null
 ```
+
+In each case documented below, you will have a snippet of the custom type and another for the code needed to fill the content field into your JS Template.
+In these examples we have a `doc` parameter corresponding to the fetched prismic document.
+
 
 ### Embed
 Custom type
@@ -427,9 +431,6 @@ for(slice in doc.contentAsSlices) {
 
 ```
 
-
-It'll come soon!
-You'll find here all the documentation to get your content for each kind of prismic fragment.
 
 ## License
 
